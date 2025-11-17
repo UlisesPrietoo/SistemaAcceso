@@ -53,13 +53,16 @@ fun AppNav() {
             DetailScreen(id = id)
         }
 
+        // --- SECCIÓN CORREGIDA ---
+        // Aquí estaba el error.
+        // 'onGo' se cambió por 'onGoToLogin' para coincidir con RegisterScreen.kt
         composable(route = "register") {
-            RegisterScreen(onGo= {
+            RegisterScreen(onGoToLogin = { // <-- CAMBIO HECHO AQUÍ
 
                 nav.navigate("login") {
 
-                popUpTo("login") { inclusive = true}
-            } })
+                    popUpTo("login") { inclusive = true}
+                } })
         }
     }
 }

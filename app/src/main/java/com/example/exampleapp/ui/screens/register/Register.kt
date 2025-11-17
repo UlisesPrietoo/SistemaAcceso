@@ -1,138 +1,267 @@
 package com.example.exampleapp.ui.screens.register
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+// --- IMPORTACIONES EXPLÍCITAS PARA MATERIAL 3 ---
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.exampleapp.ui.components.PasswordTextField
+import kotlinx.coroutines.flow.collectLatest
+// --- FIN DE IMPORTACIONES ---
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    // 1. Renombrado para mayor claridad: esta acción se ejecuta cuando hay que ir a Login.
-    onGo: () -> Unit,
+    onGoToLogin: () -> Unit, // Renombrado de 'onGo' para mayor claridad
     registerViewModel: RegisterViewModel = viewModel()
 ) {
-    // 2. Simplificamos el estado de los campos a String. Es más directo.
-    var username by remember { mutableStateOf("") }
+    // Estados para los campos de texto
+    var name by remember { mutableStateOf("") } // 'username' cambiado a 'name'
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") } // Es crucial para un buen registro.
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
 
-    // 3. Observamos el estado del proceso de registro desde el ViewModel.
-    //    `collectAsState` hace que la UI se recomponga automáticamente cuando este estado cambia.
-    val registrationState by registerViewModel.registrationState.collectAsState()
+    val registerState by registerViewModel.registerState.collectAsState()
+    var errorText by remember { mutableStateOf<String?>(null) }
 
-    // 4. Usamos LaunchedEffect para manejar la navegación como un "efecto secundario".
-    //    Esto se ejecuta solo cuando `registrationState` cambia a `Success`.
-    //    Evita la navegación en cada recomposición.
-    LaunchedEffect(registrationState) {
-        if (registrationState is RegistrationState.Success) {
-            onGo()
+    // Efecto para manejar la navegación y errores
+    LaunchedEffect(registerState) {
+        registerViewModel.registerState.collectLatest { state ->
+            when (state) {
+                is RegisterState.Success -> onGoToLogin() // Éxito: te envía a Login
+                is RegisterState.Error -> errorText = state.message
+                else -> errorText = null
+            }
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Crear nueva cuenta", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(24.dp))
+    // Mismo fondo degradado que el Login
+    val gradientBrush = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+            MaterialTheme.colorScheme.background
+        ),
+        startY = 0.0f,
+        endY = 1500.0f
+    )
 
-        // No es necesaria la Card exterior, podemos aplicar padding directamente.
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-        ) {
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Nombre de usuario") },
-                modifier = Modifier.fillMaxWidth()
-            )
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background.copy(alpha = 0.0f), // Transparente
+        content = { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(gradientBrush)
+                    .padding(paddingValues)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
 
-            Spacer(Modifier.height(16.dp))
+                    // --- Sección del Logo ---
+                    Icon(
+                        imageVector = Icons.Filled.PersonAdd, // Icono de "Añadir Persona"
+                        contentDescription = "Logo de Registro",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .padding(bottom = 16.dp)
+                    )
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Correo electrónico") },
-                modifier = Modifier.fillMaxWidth()
-            )
+                    Text(
+                        text = "Crear Cuenta",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                    Text(
+                        text = "Complete sus datos para registrarse.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(bottom = 32.dp)
+                    )
 
-            Spacer(Modifier.height(16.dp))
+                    // --- Tarjeta del Formulario ---
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(24.dp)) {
+                            // --- Campo de Nombre ---
+                            OutlinedTextField(
+                                value = name,
+                                onValueChange = { name = it },
+                                label = { Text("Nombre Completo") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                leadingIcon = {
+                                    Icon(Icons.Default.Person, "Nombre")
+                                },
+                                colors = OutlinedTextFieldDefaults.colors()
+                            )
 
-            PasswordTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = "Contraseña"
-            )
+                            Spacer(Modifier.height(16.dp))
 
-            Spacer(Modifier.height(16.dp))
+                            // --- Campo de Correo ---
+                            OutlinedTextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = { Text("Correo Electrónico") },
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                singleLine = true,
+                                leadingIcon = {
+                                    Icon(Icons.Default.Email, "Correo")
+                                },
+                                // ----- ¡¡AQUÍ ESTÁ LA CORRECCIÓN!! -----
+                                colors = OutlinedTextFieldDefaults.colors()
+                            )
 
-            PasswordTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                label = "Confirmar contraseña"
-            )
-        }
+                            Spacer(Modifier.height(16.dp))
 
-        Spacer(Modifier.height(24.dp))
+                            // --- Campo de Contraseña ---
+                            // Reemplaza tu 'PasswordTextField' por este OutlinedTextField estándar
+                            OutlinedTextField(
+                                value = password,
+                                onValueChange = { password = it },
+                                label = { Text("Contraseña") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                leadingIcon = {
+                                    Icon(Icons.Default.Lock, "Contraseña")
+                                },
+                                trailingIcon = {
+                                    val image = if (passwordVisible) Icons.Filled.LockOpen else Icons.Filled.Lock
+                                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                        Icon(imageVector = image, "Mostrar/Ocular")
+                                    }
+                                }
+                            )
 
-        // 5. La UI reacciona al estado del ViewModel.
-        when (val state = registrationState) {
-            is RegistrationState.Loading -> {
-                // Muestra un indicador de carga mientras se procesa el registro.
-                CircularProgressIndicator()
+                            Spacer(Modifier.height(16.dp))
+
+                            // --- Campo de Confirmar Contraseña ---
+                            OutlinedTextField(
+                                value = confirmPassword,
+                                onValueChange = { confirmPassword = it },
+                                label = { Text("Confirmar Contraseña") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                leadingIcon = {
+                                    Icon(Icons.Default.Lock, "Contraseña")
+                                },
+                                trailingIcon = {
+                                    val image = if (confirmPasswordVisible) Icons.Filled.LockOpen else Icons.Filled.Lock
+                                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                        Icon(imageVector = image, "Mostrar/Ocular")
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // --- Sección de Error ---
+                    errorText?.let {
+                        Text(
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    // --- Botón de Registro y Carga ---
+                    if (registerState is RegisterState.Loading) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Button(
+                            onClick = {
+                                // Llamada a la función del ViewModel actualizada
+                                registerViewModel.registerUser(name, email, password, confirmPassword)
+                            },
+                            // Validación de botón actualizada
+                            enabled = name.isNotBlank() && email.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Text("Registrarme", style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // --- Botón de Volver a Login ---
+                    TextButton(onClick = onGoToLogin) {
+                        Text(
+                            text = "¿Ya tienes cuenta? Inicia sesión",
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
             }
-            is RegistrationState.Error -> {
-                // Muestra el mensaje de error si algo falla.
-                Text(
-                    text = state.message,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Spacer(Modifier.height(8.dp))
-                // Volvemos a mostrar el botón para que el usuario pueda intentarlo de nuevo.
-                RegisterButton(
-                    enabled = username.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && password == confirmPassword,
-                    onClick = { registerViewModel.registerUser(email, password, username) }
-                )
-            }
-            else -> {
-                // Por defecto (estado Idle o Success), muestra el botón.
-                RegisterButton(
-                    enabled = username.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && password == confirmPassword,
-                    onClick = { registerViewModel.registerUser(email, password, username) }
-                )
-            }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(onClick = onGo) {
-            Text("¿Ya tienes cuenta? Inicia sesión")
-        }
-    }
-}
-
-// 6. (Opcional pero recomendado) Extraer el botón a su propio Composable para no repetir código.
-@Composable
-private fun RegisterButton(enabled: Boolean, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-    ) {
-        Text("Registrarse")
-    }
+    )
 }
